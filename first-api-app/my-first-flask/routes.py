@@ -2,7 +2,8 @@ from flask import request, jsonify, Blueprint
 from werkzeug.exceptions import NotFound, BadRequest, Conflict, UnprocessableEntity
 from models import tasks
 import uuid
-
+from db import db
+from bson.objectid import ObjectId
 
 tasks_bp = Blueprint("tasks", __name__)
 
@@ -10,16 +11,27 @@ tasks_bp = Blueprint("tasks", __name__)
 @tasks_bp.route("/tasks", methods=["GET"])
 def get_tasks():
     # Return every task currently stored in memory.
-    return tasks
-
+    tasks = list(db.todo.find())
+    for task in tasks:
+        task["_id"] = str(task["_id"])
+    
+    return jsonify({
+        "success": True,
+        "data": tasks
+    })
 
 @tasks_bp.route("/tasks/<task_id>", methods=["GET"])
 def get_task(task_id):
     # Look up a single task and fail with 404 if it does not exist.
-    for task in tasks:
-        if task_id == task["id"]:
-             return task
-    raise NotFound(f"{task_id} not found")
+    task =  db.todo.find_one({ "_id": ObjectId(f"{task_id}") })
+    if task is None:
+        raise NotFound(f"{task_id} not found")
+    else:
+        task["_id"] = str(task["_id"]) 
+        return jsonify({
+            "success": True,
+            "task": task
+        })
 
 
 @tasks_bp.route("/tasks", methods=["POST"])
@@ -38,13 +50,14 @@ def create_task():
 
     # New tasks get a generated id and start as incomplete.
     new_task = {
-    "id": str(uuid.uuid4()),
     "title": title.strip(),
     "completed": False
         }
-    tasks.append(new_task)
+    
+    db.todo.insert_one(new_task)
+    new_task["_id"] = str(new_task["_id"])
     return jsonify({
-        "success": True,
+         "success": True,
         "data": new_task
     }), 201
 
