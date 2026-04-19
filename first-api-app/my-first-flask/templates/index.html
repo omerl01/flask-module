@@ -1,185 +1,210 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Todo App</title>
-  <link rel="stylesheet" href="/static/style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Todo List</h1>
+    <div class="container">
+        <h1>Task Manager</h1>
 
-    <form id="add-form">
-      <input
-        type="text"
-        id="new-title"
-        placeholder="What needs to be done?"
-        autocomplete="off"
-        required
-      />
-      <button type="submit">Add</button>
-    </form>
+        <section class="form-section">
+            <h3>Create New List</h3>
+            <div class="input-group">
+                <input type="text" id="listName" placeholder="Work, Groceries, etc.">
+                <button onclick="createList()">Add List</button>
+            </div>
+        </section>
 
-    <ul id="task-list"></ul>
+        <section class="form-section">
+            <h3>Add Task</h3>
+            <div class="input-group">
+                <input type="text" id="taskTitle" placeholder="Task description">
+                <select id="listSelect">
+                    <option value="">No List</option>
+                </select>
+                <button onclick="createTask()">Add Task</button>
+            </div>
+        </section>
 
-    <p id="empty-msg" class="empty-msg hidden">No tasks yet. Add one above!</p>
-    <p id="error-msg" class="error-msg hidden"></p>
-  </div>
+        <hr>
 
-  <script>
-    const API = "/tasks";
+        <div id="display-area">
+            <div class="column">
+                <h2>Lists</h2>
+                <ul id="lists-container"></ul>
+            </div>
+            <div class="column">
+                <h2>Tasks</h2>
+                <ul id="tasks-container"></ul>
+            </div>
+        </div>
+    </div>
 
-    const taskList  = document.getElementById("task-list");
-    const emptyMsg  = document.getElementById("empty-msg");
-    const errorMsg  = document.getElementById("error-msg");
-    const addForm   = document.getElementById("add-form");
-    const newTitle  = document.getElementById("new-title");
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalHeader">Edit Item</h3>
+            <input type="hidden" id="editId">
+            <input type="hidden" id="editCollection">
+            
+            <div class="input-group-vertical">
+                <label>Name/Title:</label>
+                <input type="text" id="editInput">
+                
+                <div id="listMoveSection" style="display:none;">
+                    <label>Move to List:</label>
+                    <select id="editListSelect"></select>
+                </div>
+            </div>
 
-    function showError(msg) {
-      errorMsg.textContent = msg;
-      errorMsg.classList.remove("hidden");
-      setTimeout(() => errorMsg.classList.add("hidden"), 4000);
-    }
+            <div class="modal-buttons">
+                <button onclick="saveEdit()">Save Changes</button>
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
 
-    function renderTasks(tasks) {
-      taskList.innerHTML = "";
-      emptyMsg.classList.toggle("hidden", tasks.length > 0);
+    <script>
+        const API_BASE = ""; 
 
-      tasks.forEach(task => {
-        const li = document.createElement("li");
-        li.className = "task-item" + (task.completed ? " completed" : "");
-        li.dataset.id = task._id;
-
-        li.innerHTML = `
-          <label class="checkbox-label">
-            <input type="checkbox" class="toggle-cb" ${task.completed ? "checked" : ""} />
-            <span class="title-text">${escapeHtml(task.title)}</span>
-          </label>
-          <div class="actions">
-            <button class="btn-edit" title="Edit">&#9998;</button>
-            <button class="btn-delete" title="Delete">&#10005;</button>
-          </div>
-        `;
-
-        // Toggle completed
-        li.querySelector(".toggle-cb").addEventListener("change", () => toggleTask(task._id, !task.completed));
-
-        // Delete
-        li.querySelector(".btn-delete").addEventListener("click", () => deleteTask(task._id));
-
-        // Edit
-        li.querySelector(".btn-edit").onclick = () => startEdit(li, task, task._id);
-
-        taskList.appendChild(li);
-      });
-    }
-
-    function escapeHtml(str) {
-      return str.replace(/[&<>"']/g, c => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-      }[c]));
-    }
-
-    async function loadTasks() {
-      try {
-        const res  = await fetch(API);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to load tasks");
-        renderTasks(data.data);
-      } catch (e) {
-        showError(e.message);
-      }
-    }
-
-    async function createTask(title) {
-      const res  = await fetch(API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create task");
-      return data.data;
-    }
-
-    async function toggleTask(id, completed) {
-      const res  = await fetch(`${API}/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update task");
-      loadTasks();
-    }
-
-    async function deleteTask(id) {
-      const res  = await fetch(`${API}/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to delete task");
-      loadTasks();
-    }
-
-    async function saveEdit(id, newTitleValue, li) {
-      try {
-        const res  = await fetch(`${API}/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: newTitleValue }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to update task");
-        loadTasks();
-      } catch (e) {
-        showError(e.message);
-      }
-    }
-
-    function startEdit(li, task, id) {
-      const label = li.querySelector(".checkbox-label");
-      const titleSpan = li.querySelector(".title-text");
-      const editBtn = li.querySelector(".btn-edit");
-
-      const input = document.createElement("input");
-      input.type = "text";
-      input.className = "edit-input";
-      input.value = task.title;
-
-      label.replaceChild(input, titleSpan);
-      editBtn.textContent = "Save";
-      input.focus();
-
-      const finish = () => {
-        const val = input.value.trim();
-        if (val && val !== task.title) {
-          saveEdit(id, val, li);
-        } else {
-          loadTasks(); // revert
+        // --- FETCH & REFRESH ---
+        async function fetchData(collection) {
+            const res = await fetch(`${API_BASE}/all/${collection}`);
+            const json = await res.json();
+            return json.data || json;
         }
-      };
 
-      editBtn.onclick = finish;
-      input.addEventListener("keydown", e => {
-        if (e.key === "Enter") finish();
-        if (e.key === "Escape") loadTasks();
-      });
-    }
+        // --- OPEN MODAL ---
+        function openModal(id, collection, currentVal, currentListId = "") {
+            document.getElementById('editId').value = id;
+            document.getElementById('editCollection').value = collection;
+            document.getElementById('editInput').value = currentVal;
+            
+            const moveSection = document.getElementById('listMoveSection');
+            if (collection === 'todo') {
+                moveSection.style.display = 'block';
+                // Clone the main list dropdown for the modal
+                const mainSelect = document.getElementById('listSelect');
+                const modalSelect = document.getElementById('editListSelect');
+                modalSelect.innerHTML = mainSelect.innerHTML;
+                modalSelect.value = currentListId;
+            } else {
+                moveSection.style.display = 'none';
+            }
 
-    addForm.addEventListener("submit", async e => {
-      e.preventDefault();
-      const title = newTitle.value.trim();
-      if (!title) return;
-      try {
-        await createTask(title);
-        newTitle.value = "";
-        loadTasks();
-      } catch (e) {
-        showError(e.message);
-      }
-    });
+            document.getElementById('editModal').style.display = 'flex';
+        }
 
-    loadTasks();
-  </script>
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // --- SAVE EDIT ---
+        async function saveEdit() {
+            const id = document.getElementById('editId').value;
+            const collection = document.getElementById('editCollection').value;
+            const newVal = document.getElementById('editInput').value;
+
+            let payload = {};
+            if (collection === 'list') {
+                payload = { name: newVal };
+            } else {
+                const newListId = document.getElementById('editListSelect').value;
+                payload = { title: newVal, list: newListId };
+            }
+
+            await fetch(`${API_BASE}/item/${id}/${collection}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            closeModal();
+            refresh();
+        }
+
+        // --- DELETE, TOGGLE, CREATE (Standard) ---
+        async function deleteItem(id, collection) {
+            if (!confirm("Delete?")) return;
+            await fetch(`${API_BASE}/item/${id}/${collection}`, { method: 'DELETE' });
+            refresh();
+        }
+
+        async function toggleTask(id, currentStatus) {
+            await fetch(`${API_BASE}/item/${id}/todo`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ completed: !currentStatus })
+            });
+            refresh();
+        }
+
+        async function createList() {
+            const name = document.getElementById('listName').value;
+            await fetch(`${API_BASE}/all/list`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            refresh();
+        }
+
+        async function createTask() {
+            const title = document.getElementById('taskTitle').value;
+            const listId = document.getElementById('listSelect').value;
+            await fetch(`${API_BASE}/all/todo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, list: listId })
+            });
+            refresh();
+        }
+
+        async function refresh() {
+            const lists = await fetchData('list');
+            const tasks = await fetchData('todo');
+
+            // Dropdown
+            const select = document.getElementById('listSelect');
+            select.innerHTML = '<option value="">No List</option>';
+            lists.forEach(l => select.innerHTML += `<option value="${l._id}">${l.name}</option>`);
+
+            // Lists
+            const listUl = document.getElementById('lists-container');
+            listUl.innerHTML = '';
+            lists.forEach(l => {
+                listUl.innerHTML += `<li>
+                    <span>${l.name}</span>
+                    <div class="btn-group">
+                        <button onclick="openModal('${l._id}', 'list', '${l.name}')">✎</button>
+                        <button onclick="deleteItem('${l._id}', 'list')">×</button>
+                    </div>
+                </li>`;
+            });
+
+            // Tasks
+            const taskUl = document.getElementById('tasks-container');
+            taskUl.innerHTML = '';
+            tasks.forEach(t => {
+                const listName = lists.find(l => l._id === t.list)?.name || 'General';
+                taskUl.innerHTML += `
+                    <li class="${t.completed ? 'completed' : ''}">
+                        <div class="task-info">
+                            <input type="checkbox" ${t.completed ? 'checked' : ''} 
+                                   onclick="toggleTask('${t._id}', ${t.completed})">
+                            <strong>${t.title}</strong>
+                            <br><small>List: ${listName}</small>
+                        </div>
+                        <div class="btn-group">
+                            <button onclick="openModal('${t._id}', 'todo', '${t.title}', '${t.list}')">✎</button>
+                            <button onclick="deleteItem('${t._id}', 'todo')">×</button>
+                        </div>
+                    </li>`;
+            });
+        }
+        refresh();
+    </script>
 </body>
 </html>
