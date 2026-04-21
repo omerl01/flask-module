@@ -1,18 +1,29 @@
-from flask import Flask
-from routes.tasks import tasks_bp
-from errors import errors_bp
-from flask import render_template
+from routes.tasks import router
+from routes.lists import list_router
 from db import init_db
+from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
+import uvicorn
 
-app = Flask(__name__)
-init_db(app)
-app.register_blueprint(tasks_bp)
-app.register_blueprint(errors_bp)
+app = FastAPI()
 
 
-@app.route("/", methods = ["GET"])
-def index():
-    return render_template("index.html")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+init_db()
+app.include_router(router, tags=["tasks"])
+app.include_router(list_router, tags=["lists"])
+
+templates = Jinja2Templates(directory="templates")
+@app.get("/", response_class=HTMLResponse)
+def index(request: Request):
+    # שים לב: הפרמטר הראשון הוא שם הקובץ, השני הוא המילון
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html", 
+        context={"request": request}
+    )
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
