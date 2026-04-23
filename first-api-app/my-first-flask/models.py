@@ -50,5 +50,6 @@ def delete_task(collection, task_id):
     
     if collection == "list":
         tasks = get_collection("todo")
-        tasks.delete_many({"list": task_id})
+        tasks.delete_many({"list": str(task_id)})
     return item_name
+    
