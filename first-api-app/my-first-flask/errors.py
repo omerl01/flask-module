@@ -4,7 +4,7 @@ from flask import jsonify, Blueprint, current_app
 # Blueprint that keeps API errors returning JSON instead of HTML.
 errors_bp = Blueprint("errrors", __name__)
 
-
+# not found error
 @errors_bp.app_errorhandler(NotFound)
 def not_found(e):
     # Missing resources return a simple JSON error payload.
@@ -12,7 +12,7 @@ def not_found(e):
         "ERROR": str(e)
     }), 404
 
-
+# hande bad request 
 @errors_bp.app_errorhandler(BadRequest)
 def bad_request(e):
     # Validation and malformed request errors land here.
@@ -20,7 +20,7 @@ def bad_request(e):
         "ERROR": str(e)
     }), 400
 
-
+# handle unprocessable entity type
 @errors_bp.app_errorhandler(UnprocessableEntity)
 def empty_strings(e):
     # Used when the request shape is valid but the value itself is unusable.
@@ -28,7 +28,7 @@ def empty_strings(e):
         "ERROR": str(e)
     }), 422
 
-
+# handle regular exeption
 @errors_bp.app_errorhandler(Exception)
 def unexpected_error(e):
     # Log unexpected failures and keep the response JSON-based for clients.

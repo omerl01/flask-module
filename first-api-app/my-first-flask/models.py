@@ -6,7 +6,7 @@ from werkzeug.exceptions import NotFound, BadRequest, Conflict, UnprocessableEnt
 
     
 def get_all(collection):
-    # Return every task currently stored in memory.
+    # Return every task or list currently stored in memory.
     col = get_collection(collection)
     tasks = list(col.find())
     for task in tasks:
@@ -19,11 +19,11 @@ def get_all(collection):
     
 
 def get_one(id, collection):
-    # Look up a single task and fail with 404 if it does not exist
+    # Look up a single task or list and fail with 404 if it does not exist
     col = get_collection(collection)
     if  not ObjectId.is_valid(id):
         raise NotFound(f"{id} not valid id format")
-    task =  col.find_one({ "_id": ObjectId(f"{id}") })
+    task =  col.find_one({ "_id": ObjectId(id)})
     
     if task is None:
         raise NotFound(f"{id} not found")
@@ -36,7 +36,7 @@ def get_one(id, collection):
 
 
 def create(collection):
-    # `silent=True` lets us raise our own JSON-friendly validation error.
+    # `create a task or a list
     col = get_collection(collection)
     data = request.get_json(silent=True)
     new_entry = None
@@ -81,7 +81,7 @@ def create(collection):
         }), 201
 
 def change_task(task_id, collection):
-    # Updates accept only the fields this simple API knows how to change.
+    # Updates accept only the fields this simple API knows how to change for task and list items.
     col = get_collection(collection)
     if  not ObjectId.is_valid(task_id):
         raise NotFound(f"{task_id} not valid id format")
@@ -137,7 +137,7 @@ def change_task(task_id, collection):
         }), 200
     
 def delete_task(task_id, collection):
-    # Delete the matching task and confirm which one was removed.
+    # Delete the matching task or list
     col = get_collection(collection)
     if  not ObjectId.is_valid(task_id):
         raise NotFound(f"{task_id} not valid id format")
