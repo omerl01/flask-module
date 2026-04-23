@@ -6,6 +6,6 @@ class Lists(BaseModel):
     
 
 class Tasks(BaseModel):
-    title : str = Field(..., min_length=1)
+    title : str = Field(min_length=1)
     completed : bool = False
-    list : str | None
+    list : str | None = "general"
