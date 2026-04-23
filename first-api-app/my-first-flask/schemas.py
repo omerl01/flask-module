@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from bson.objectid import ObjectId
+
 
 class Lists(BaseModel):
     name : str
