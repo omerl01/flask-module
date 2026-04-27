@@ -1,28 +1,23 @@
-from flask import request, jsonify, Blueprint
-from werkzeug.exceptions import NotFound, BadRequest, Conflict, UnprocessableEntity
+from fastapi import APIRouter
+from schemas import Tasks
 import models
-import uuid
-from bson.objectid import ObjectId
 
-tasks_bp = Blueprint("tasks", __name__)
+router = APIRouter()
+collection = "todo"
+
+@router.get("/tasks")
+def get_all_tasks():
+    return models.get_all(collection)
+
+@router.post("/tasks", status_code=201)
+def create_task(l: Tasks):
+    return models.create(collection, l.model_dump())
+
+@router.put("/tasks/{task_id}")
+def change_task(task_id: str, t: Tasks):
+    return models.change_task(collection, task_id, t.model_dump())
 
 
-@tasks_bp.route("/all/<collection>", methods=["GET", "POST"])
-def get_tasks(collection):
-    if request.method == "GET":
-        return models.get_all(collection)
-    elif request.method =="POST":
-        return models.create(collection)
-    else:
-        raise BadRequest("request type not supported")
-
-@tasks_bp.route("/item/<task_id>/<collection>", methods=["GET", "PUT", "DELETE"])
-def get_one(task_id, collection):
-    if request.method == "GET":
-        return models.get_one(task_id, collection)
-    elif request.method == "PUT":
-        return models.change_task(task_id, collection)
-    elif request.method == "DELETE":
-        return models.delete_task(task_id, collection)
-    else:
-        raise BadRequest("action not supported")
+@router.delete("/tasks/{task_id}")
+def delete(task_id):
+    return models.delete_task(collection, task_id)
