@@ -12,7 +12,6 @@ def get_all(collection):
     
 
 def create(collection, new_entry):
-    # `silent=True` lets us raise our own JSON-friendly validation error.
     col = get_collection(collection)
     col.insert_one(new_entry)
     new_entry["_id"] = str(new_entry["_id"])

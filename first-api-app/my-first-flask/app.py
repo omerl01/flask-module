@@ -18,7 +18,6 @@ app.include_router(list_router, tags=["lists"])
 templates = Jinja2Templates(directory="templates")
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    # שים לב: הפרמטר הראשון הוא שם הקובץ, השני הוא המילון
     return templates.TemplateResponse(
         request=request,
         name="index.html", 
